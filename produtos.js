@@ -5,8 +5,7 @@ const server = new Koa();
 
 const products = [];
 const orders = [];
-let atualizar = false;
-let precoPedido = 0;
+let precoPedido = [];
 
 server.use(bodyparser());
 
@@ -40,14 +39,11 @@ server.use((ctx) => {
       }
     }
   }
-  if (ctx.url.includes(`/products/:`)) {
-    let url = ctx.url.split("/:");
-    let indice = url[1] - 1;
-    console.log(indice);
+  if (ctx.url.includes(`/products/`)) {
+    let url = ctx.url.split("/");
+    let indice = url[2] - 1;
     if (ctx.method == "GET") {
-      console.log("olá");
-
-      if (!(url[1] == 0) && products.length != 0) {
+      if (!(url[2] == 0) && products.length != 0) {
         if (products.length > indice) {
           ctx.status = 200;
           ctx.body = {
@@ -130,11 +126,17 @@ server.use((ctx) => {
         dados: newOrder(requestBody),
       };
     } else if (ctx.method == "GET") {
+      let ordensPermitidas = [];
+      for (let i = 0; i < orders.length; i++) {
+        if (orders[i].deletado == false) {
+          ordensPermitidas.push(orders[i]);
+        }
+      }
       if (orders.length > 0) {
         ctx.status = 200;
         ctx.body = {
           status: "sucesso",
-          dados: orders,
+          dados: ordensPermitidas,
         };
       } else {
         ctx.status = 404;
@@ -155,18 +157,104 @@ server.use((ctx) => {
       };
     }
   }
-  if (ctx.url.includes(`/orders/:`)) {
-    let url = ctx.url.split("/:");
-    let indice = url[1] - 1;
+  if (ctx.url.includes(`/orders/`)) {
+    let url = ctx.url.split("/");
+    let indice = url[2] - 1;
+    const regex = /[0-9]/;
 
     if (ctx.method == "GET") {
-      if (!(url[1] == 0) && products.length != 0) {
-        if (products.length > indice) {
+      if (url[2] == "incompleto") {
+        console.log("entrei 2");
+        let incompletos = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            incompletos.push(orders[x]);
+          }
           ctx.status = 200;
           ctx.body = {
             status: "sucesso",
-            dados: products[indice],
+            dados: incompletos,
           };
+        }
+      } else if (url[2] == "processando") {
+        let processando = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            processando.push(orders[x]);
+          }
+          ctx.status = 200;
+          ctx.body = {
+            status: "sucesso",
+            dados: processando,
+          };
+        }
+      } else if (url[2] == "pago") {
+        console.log("entrei");
+        let pagos = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            console.log(url[2], orders[x].estado);
+            pagos.push(orders[x]);
+          }
+          ctx.status = 200;
+          ctx.body = {
+            status: "sucesso",
+            dados: pagos,
+          };
+        }
+      } else if (url[2] == "enviado") {
+        let enviados = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            enviados.push(orders[x]);
+          }
+          ctx.status = 200;
+          ctx.body = {
+            status: "sucesso",
+            dados: enviados,
+          };
+        }
+      } else if (url[2] == "entregue") {
+        let entregues = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            entregues.push(orders[x]);
+          }
+          ctx.status = 200;
+          ctx.body = {
+            status: "sucesso",
+            dados: entregues,
+          };
+        }
+      } else if (url[2] == "cancelado") {
+        let cancelados = [];
+        for (let x = 0; x < orders.length; x++) {
+          if (url[2] == orders[x].estado) {
+            cancelados.push(orders[x]);
+          }
+          ctx.status = 200;
+          ctx.body = {
+            status: "sucesso",
+            dados: cancelados,
+          };
+        }
+      } else if (regex.test(url[2])) {
+        if (!(url[2] == 0) && orders.length != 0) {
+          if (orders.length > indice) {
+            ctx.status = 200;
+            ctx.body = {
+              status: "sucesso",
+              dados: orders[indice],
+            };
+          } else {
+            ctx.status = 404;
+            ctx.body = {
+              status: "erro",
+              dados: {
+                mensagem: "Conteúdo não encontrado",
+              },
+            };
+          }
         } else {
           ctx.status = 404;
           ctx.body = {
@@ -176,24 +264,16 @@ server.use((ctx) => {
             },
           };
         }
-      } else {
-        ctx.status = 404;
-        ctx.body = {
-          status: "erro",
-          dados: {
-            mensagem: "Conteúdo não encontrado",
-          },
-        };
       }
     } else if (ctx.method == "PUT") {
-      if (!(url[1] == 0) && products.length != 0) {
-        if (products.length > indice) {
-          const resposta = updateProducts(products, indice, requestBody);
+      if (!(url[1] == 0) && orders.length != 0) {
+        if (orders.length > indice) {
+          const resposta = updateOrders(orders, indice, requestBody);
           if (resposta) {
             ctx.status = 200;
             ctx.body = {
               status: "Sucesso",
-              dados: products[indice],
+              dados: orders[indice],
             };
           } else {
             ctx.status = 404;
@@ -215,13 +295,13 @@ server.use((ctx) => {
         };
       }
     } else if (ctx.method == "DELETE") {
-      if (!(url[1] == 0) && products.length != 0) {
-        if (products.length > indice) {
-          products[indice].deletado = true;
+      if (!(url[1] == 0) && orders.length != 0) {
+        if (orders.length > indice) {
+          orders[indice].deletado = true;
           ctx.status = 200;
           ctx.body = {
             status: "Sucesso",
-            dados: products[indice],
+            dados: orders[indice],
           };
         }
       }
@@ -250,18 +330,13 @@ function newProducts(produto) {
 }
 
 function newOrder(pedido) {
-  for (let i = 0; i < pedido.produtos.length; i++) {
-    precoPedido +=
-      products[pedido.produtos[i].id - 1].valor * pedido.produtos[i].qtd;
-    products[pedido.produtos[i].id - 1].quantidadeDisponivel -=
-      pedido.produtos[i].qtd;
-  }
+  precoPedido[orders.length + 1] = 0;
   const novoPedido = {
     id: orders.length + 1,
-    produtos: pedido.produtos, // id e qntd;
+    produtos: [], // id e qtd;
     estado: "incompleto",
     idCliente: pedido.idCliente,
-    valorTotal: precoPedido,
+    valorTotal: precoPedido[orders.length + 1],
     deletado: false,
   };
 
@@ -292,6 +367,67 @@ function updateProducts(produto, index, requestBody) {
     return (atualizar = true);
   } else {
     return (atualizar = false);
+  }
+}
+
+function updateOrders(ordens, index, pedido) {
+  let cont = 0;
+  if (!pedido.hasOwnProperty("estado") && pedido.hasOwnProperty("qtd")) {
+    if (ordens[index].produtos.length == 0) {
+      if (ordens[index].estado == "incompleto") {
+        for (let i = 0; i < pedido.length; i++) {
+          precoPedido[index] +=
+            products[pedido[i].id - 1].valor * pedido[i].qtd;
+          products[pedido[i].id - 1].quantidadeDisponivel -= pedido[i].qtd;
+        }
+        const novoPedido = {
+          id: ordens[index].id,
+          produtos: [pedido],
+          estado: "incompleto",
+          idCliente: ordens[index].idCliente,
+          valorTotal: precoPedido[index],
+          deletado: false,
+        };
+
+        orders[index] = novoPedido;
+        return novoPedido;
+      }
+    } else {
+      if (ordens[index].estado == "incompleto") {
+        for (let i = 0; i < pedido.length; i++) {
+          precoPedido[index] +=
+            products[pedido[i].id - 1].valor * pedido[i].qtd;
+          products[pedido[i].id - 1].quantidadeDisponivel -= pedido[i].qtd;
+        }
+
+        const novoPedido = {
+          produtos: pedido,
+          valorTotal: precoPedido[index],
+        };
+        for (let i = 0; i < orders[index].produtos.length; i++) {
+          if (orders[index].produtos[i].id == pedido.id) {
+            orders[index].produtos[i].qtd =
+              parseInt(orders[index].produtos[i].qtd) + parseInt(pedido.qtd);
+            break;
+          } else {
+            cont++;
+          }
+        }
+        if (cont == orders[index].produtos.length) {
+          ordens[index].produtos.push(novoPedido.produtos);
+          ordens[index].valorTotal = novoPedido.valorTotal;
+          cont = 0;
+        }
+
+        console.log(ordens[index].produtos);
+
+        return novoPedido;
+      }
+    }
+  } else if (pedido.hasOwnProperty("estado") && !pedido.hasOwnProperty("qtd")) {
+    orders[index].estado = pedido.estado;
+    return pedido.estado;
+  } else if (pedido.hasOwnProperty("estado") && pedido.hasOwnProperty("qtd")) {
   }
 }
 
